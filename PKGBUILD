@@ -1,14 +1,14 @@
 # Maintainer: Kuan-Yen Chou <kuanyenchou at gmail dot com>
 
 pkgname=everforest-gtk-theme-git
-pkgver=r36.8481714c
+pkgver=r37.32093119
 pkgrel=1
 pkgdesc='Everforest colour palette for GTK'
 arch=('any')
 url="https://github.com/Fausto-Korpsvart/Everforest-GTK-Theme"
 license=('GPL3')
-depends=()
-makedepends=('git')
+depends=('gtk-engine-murrine')
+makedepends=('git' 'sassc')
 source=("$pkgname"::'git+https://github.com/Fausto-Korpsvart/Everforest-GTK-Theme')
 sha256sums=('SKIP')
 
@@ -23,21 +23,37 @@ pkgver() {
 
 prepare() {
     cd "$srcdir/$pkgname"
-    sed -e 's/oomox-//' -i icons/*/index.theme
-    sed -e 's/[Ee]verforest_[Ll]ight/Everforest-Light/g' -i icons/everforest_light/index.theme
+    sed -i icons/*/index.theme \
+        -e 's/oomox-//'
+    sed -i icons/everforest_light/index.theme \
+        -e 's/[Ee]verforest_[Ll]ight/Everforest-Light/g'
+
+    # This can be removed once the following issue is resolved.
+    # https://github.com/Fausto-Korpsvart/Everforest-GTK-Theme/issues/14
+    # https://github.com/Fausto-Korpsvart/Everforest-GTK-Theme/pull/15
+    local lower_yellow_dark='themes/src/assets/gtk/thumbnails/thumbnail-Yellow-dark.png'
+    local upper_yellow_dark='themes/src/assets/gtk/thumbnails/thumbnail-Yellow-Dark.png'
+    if [[ -f "$lower_yellow_dark" ]] && [[ ! -f "$upper_yellow_dark" ]]; then
+        mv "$lower_yellow_dark" "$upper_yellow_dark"
+    fi
+}
+
+build() {
+    cd "$srcdir/$pkgname/themes"
+    ./build.sh
 }
 
 package() {
     cd "$srcdir/$pkgname"
-    install -d "$pkgdir"/usr/share/{icons,themes}
-    # Install dark themes
+
+    # Install icons
+    mkdir -p "$pkgdir/usr/share/icons"
     cp -r icons/Everforest-Dark "$pkgdir/usr/share/icons/"
-    cp -r themes/Everforest-Dark-B "$pkgdir/usr/share/themes/Everforest-Dark-Border"
-    cp -r themes/Everforest-Dark-BL "$pkgdir/usr/share/themes/Everforest-Dark-Borderless"
-    # Install light themes
     cp -r icons/everforest_light "$pkgdir/usr/share/icons/Everforest-Light"
-    cp -r themes/Everforest-Light-B "$pkgdir/usr/share/themes/Everforest-Light-Border"
-    cp -r themes/Everforest-Light-BL "$pkgdir/usr/share/themes/Everforest-Light-Borderless"
+
+    # Install themes
+    mkdir -p "$pkgdir/usr/share/themes"
+    ./themes/install.sh --dest "$pkgdir/usr/share/themes" --theme all
 }
 
 # vim: set ts=4 sw=4 et :
